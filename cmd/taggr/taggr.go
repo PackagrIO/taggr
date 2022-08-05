@@ -64,15 +64,13 @@ func main() {
 						configuration.Set(config.PACKAGR_SCM_REPO_SHA, c.String("repo_sha"))
 					}
 					if c.IsSet("repo_tag") {
-						configuration.Set(config.PACKAGR_SCM_REPO_TAG, c.String("repo_tag"))
+						configuration.Set(config.PACKAGR_SCM_REPO_TAG_NAME, c.String("repo_tag"))
 					}
-
-					//config.Set("dry_run", c.String("dry_run"))
 
 					fmt.Println("scm:", configuration.GetString(config.PACKAGR_SCM))
 					fmt.Println("repo name:", configuration.GetString(config.PACKAGR_SCM_REPO_FULL_NAME))
 					fmt.Println("sha:", configuration.GetString(config.PACKAGR_SCM_REPO_SHA))
-					fmt.Println("tag:", configuration.GetString(config.PACKAGR_SCM_REPO_TAG))
+					fmt.Println("tag:", configuration.GetString(config.PACKAGR_SCM_REPO_TAG_NAME))
 
 					pipeline := pkg.Pipeline{}
 					err := pipeline.Start(configuration)

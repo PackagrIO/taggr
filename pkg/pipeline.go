@@ -3,8 +3,8 @@ package pkg
 import (
 	"fmt"
 	"github.com/packagrio/go-common/pipeline"
+	"github.com/packagrio/go-common/scm"
 	"github.com/packagrio/taggr/pkg/config"
-	"github.com/packagrio/taggr/pkg/scm"
 	"os"
 )
 
@@ -26,7 +26,12 @@ func (p *Pipeline) Start(configData config.Interface) error {
 	}
 	p.Scm = sourceScm
 
-	//p.Scm.Client
+	p.Data.GitHeadInfo = &pipeline.ScmCommitInfo{
+		Sha: p.Config.GetString(config.PACKAGR_SCM_REPO_SHA),
+		Repo: &pipeline.ScmRepoInfo{
+			FullName: p.Config.GetString(config.PACKAGR_SCM_REPO_FULL_NAME),
+		},
+	}
 
-	return p.Scm.CreateTagAtReference()
+	return p.Scm.CreateTagAtReference(p.Config.GetString(config.PACKAGR_SCM_REPO_TAG_NAME))
 }
