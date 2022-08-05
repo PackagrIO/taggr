@@ -1,0 +1,107 @@
+name: CI
+# This workflow is triggered on pushes to the repository.
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    name: Build Test
+    runs-on: ubuntu-latest
+    container: ghcr.io/packagrio/packagr-dev:master
+    env:
+      PROJECT_PATH: /go/src/github.com/packagrio/taggr
+    strategy:
+      matrix:
+        package_type: ['chef', 'golang', 'node', 'python', 'ruby']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build Test Binaries
+        env:
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          mkdir -p $PROJECT_PATH
+          cp -a $GITHUB_WORKSPACE/* $PROJECT_PATH/
+          cd $PROJECT_PATH
+
+          go mod vendor
+          mkdir -p vendor/gopkg.in/libgit2/git2go.v25/vendor/libgit2/build/
+          cp /usr/local/linux/lib/pkgconfig/libgit2.pc vendor/gopkg.in/libgit2/git2go.v25/vendor/libgit2/build/libgit2.pc
+          ./ci/test-build.sh ${{ matrix.package_type }}
+      - name: Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: "test-binary-${{ matrix.package_type }}"
+          path: /caches/test-binaries/
+  test:
+    name: Test
+    needs: build-test
+    runs-on: ubuntu-latest
+    container: "ghcr.io/packagrio/packagr:latest-${{ matrix.package_type }}"
+
+    strategy:
+      matrix:
+        package_type: ['chef', 'golang', 'node', 'python', 'ruby']
+    steps:
+      - name: Download test binaries
+        uses: actions/download-artifact@v2
+        with:
+          name: "test-binary-${{ matrix.package_type }}"
+      - name: Test
+        env:
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          chmod -R +x .
+          ./test-execute.sh ${{ matrix.package_type }}
+      - name: Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-coverage
+          path: /coverage/coverage-${{ matrix.package_type }}.txt
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    container: ghcr.io/packagrio/packagr-dev:master
+    env:
+      PROJECT_PATH: /go/src/github.com/packagrio/bumpr
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        env:
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          mkdir -p $PROJECT_PATH
+          cp -a $GITHUB_WORKSPACE/* $PROJECT_PATH/
+          cd $PROJECT_PATH
+
+          go mod vendor
+          mkdir -p vendor/gopkg.in/libgit2/git2go.v25/vendor/libgit2/build/
+
+          # build linux binary
+          cp /usr/local/linux/lib/pkgconfig/libgit2.pc vendor/gopkg.in/libgit2/git2go.v25/vendor/libgit2/build/libgit2.pc
+          go test -mod vendor -v -tags "static" $(go list ./... | grep -v /vendor/)
+          . /scripts/toolchains/linux/linux-build-env.sh && go build -mod vendor -ldflags "-X main.goos=linux -X main.goarch=amd64" -o packagr-bumpr-linux-amd64 -tags "static" cmd/bumpr/bumpr.go
+
+          # build mac binary
+          cp /usr/local/osx-ndk-x86/macports/pkgs/opt/local/lib/pkgconfig/libgit2.pc vendor/gopkg.in/libgit2/git2go.v25/vendor/libgit2/build/libgit2.pc
+          . /scripts/toolchains/osx/osx-build-env.sh &&  go build -mod vendor -ldflags "-X main.goos=darwin -X main.goarch=amd64" -o packagr-bumpr-darwin-amd64 -tags "static" cmd/bumpr/bumpr.go
+
+          chmod +x packagr-bumpr-linux-amd64
+          chmod +x packagr-bumpr-darwin-amd64
+          ./packagr-bumpr-linux-amd64 --help
+          echo "listing linked libraries" && ldd packagr-bumpr-linux-amd64
+
+      - name: Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: bumpr-linux-binary
+          path: ${{ env.PROJECT_PATH }}/packagr-bumpr-linux-amd64
+      - name: Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: bumpr-mac-binary
+          path: ${{ env.PROJECT_PATH }}/packagr-bumpr-darwin-amd64
