@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/analogj/go-util v0.0.0-20210417161720-39b497cca03b
-	github.com/packagrio/go-common v0.0.6
+	github.com/packagrio/go-common v0.0.7
 	github.com/spf13/viper v1.7.1
 	github.com/urfave/cli v1.22.9
 )
