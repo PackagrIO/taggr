@@ -15,11 +15,7 @@ Full documentation is available at [PackagrIO/docs](https://github.com/PackagrIO
 # Usage
 
 ```
-cd /path/to/git/repo
-cat pkg/version/version.go
-# const VERSION = "0.0.3"
-
-# export PACKAGR_PACKAGE_TYPE=[major/minor/patch]
+# set github token using GITHUB_TOKEN env var. 
 packagr-taggr create --scm github \
 --name analogj/golang_analogj_test \
 --sha ab1b5d4536a521c5797e749db34a281b9be5f68d \
